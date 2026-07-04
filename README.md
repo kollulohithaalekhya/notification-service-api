@@ -128,3 +128,9 @@ npm run build   # Compiles TypeScript → dist/
 npm start       # Runs the compiled production bundle
 ```
 "# notification-service-api" 
+
+## 🎥 Demo Video
+
+Watch the project demonstration here:
+
+https://drive.google.com/file/d/1j3G575Yxw224dxR2t9APaIkGioK3yL9M/view?usp=sharing

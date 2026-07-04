@@ -1,0 +1,62 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────
+# Notification Service — Docker Compose orchestration
+#
+# Startup order:
+#   1. mongodb   starts and passes its health check
+#   2. notification-service  boots only after mongo is healthy
+#
+# This prevents the Node process from crashing on startup due to
+# a "connection refused" error from a still-initialising Mongo.
+# ──────────────────────────────────────────────────────────────
+
+services:
+  # ── MongoDB ────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: notification-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: notification_service
+    volumes:
+      # Named volume — data persists across container restarts
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      # mongosh ping confirms the database is fully operational
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Notification Service ───────────────────────────────────
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notification-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/notification_service
+    depends_on:
+      mongodb:
+        # The API will not attempt to start until MongoDB reports healthy
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
